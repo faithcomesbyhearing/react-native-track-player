@@ -73,6 +73,8 @@ public class MusicService extends HeadlessJsTaskService {
             // Checks whether there is a React activity
             if(reactContext == null || !reactContext.hasCurrentActivity()) {
                 Notification notification = Utils.createBlankSetupNotification((Context) this);
+                String channel = Utils.getNotificationChannel((Context) this);
+
                 // Sets the service to foreground with an empty notification
                 startForeground(1, notification);
                 // Stops the service right after
@@ -130,6 +132,10 @@ public class MusicService extends HeadlessJsTaskService {
         super.onTaskRemoved(rootIntent);
 
         if (manager == null || manager.shouldStopWithApp()) {
+            if (manager != null) {
+                manager.getPlayback().stop();
+            }
+            destroy();
             stopSelf();
         }
     }
