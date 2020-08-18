@@ -72,11 +72,10 @@ public class MusicService extends HeadlessJsTaskService {
 
             // Checks whether there is a React activity
             if(reactContext == null || !reactContext.hasCurrentActivity()) {
-                Notification notification = Utils.createBlankSetupNotification((Context) this);
                 String channel = Utils.getNotificationChannel((Context) this);
 
                 // Sets the service to foreground with an empty notification
-                startForeground(1, notification);
+                startForeground(1, new NotificationCompat.Builder(this, channel).build());
                 // Stops the service right after
                 stopSelf();
             }
@@ -86,8 +85,8 @@ public class MusicService extends HeadlessJsTaskService {
     @Override
     public void onCreate() {
         super.onCreate();
-        Notification notification = Utils.createBlankSetupNotification(this);
-        startForeground(1, notification);
+        String channel = Utils.getNotificationChannel((Context) this);
+        startForeground(1,  new NotificationCompat.Builder(this, channel).build());
         manager = new MusicManager(this);
         handler = new Handler();
     }
