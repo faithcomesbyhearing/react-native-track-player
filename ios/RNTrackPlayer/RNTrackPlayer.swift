@@ -269,6 +269,7 @@ public class RNTrackPlayer: RCTEventEmitter {
         print("Destroying player")
     }
     
+    @objc(updateOptions:resolver:rejecter:)
     public func update(options: [String: Any], resolve: @escaping RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
         DispatchQueue.main.async {
             var capabilitiesStr = options["capabilities"] as? [String] ?? []
