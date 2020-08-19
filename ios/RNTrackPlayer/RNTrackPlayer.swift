@@ -269,26 +269,25 @@ public class RNTrackPlayer: RCTEventEmitter {
         print("Destroying player")
     }
     
-    @objc(updateOptions:resolver:rejecter:)
-    public func update(options: [String: Any], resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+    public func update(options: [String: Any], resolve: @escaping RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+        DispatchQueue.main.async {
+            var capabilitiesStr = options["capabilities"] as? [String] ?? []
+            if (capabilitiesStr.contains("play") && capabilitiesStr.contains("pause")) {
+                capabilitiesStr.append("togglePlayPause");
+            }
+            let capabilities = capabilitiesStr.compactMap { Capability(rawValue: $0) }
 
-        var capabilitiesStr = options["capabilities"] as? [String] ?? []
-        if (capabilitiesStr.contains("play") && capabilitiesStr.contains("pause")) {
-            capabilitiesStr.append("togglePlayPause");
-        }
-        let capabilities = capabilitiesStr.compactMap { Capability(rawValue: $0) }
+            let remoteCommands = capabilities.map { capability in
+                capability.mapToPlayerCommand(jumpInterval: options["jumpInterval"] as? NSNumber,
+                                              likeOptions: options["likeOptions"] as? [String: Any],
+                                              dislikeOptions: options["dislikeOptions"] as? [String: Any],
+                                              bookmarkOptions: options["bookmarkOptions"] as? [String: Any])
+            }
+            self.player.enableRemoteCommands(remoteCommands)
         
-        let remoteCommands = capabilities.map { capability in
-            capability.mapToPlayerCommand(jumpInterval: options["jumpInterval"] as? NSNumber,
-                                          likeOptions: options["likeOptions"] as? [String: Any],
-                                          dislikeOptions: options["dislikeOptions"] as? [String: Any],
-                                          bookmarkOptions: options["bookmarkOptions"] as? [String: Any])
-        }
-
-        player.enableRemoteCommands(remoteCommands)
-        
-        resolve(NSNull())
-    }
+            resolve(NSNull())
+         }
+     }
     
     @objc(add:before:resolver:rejecter:)
     public func add(trackDicts: [[String: Any]], before trackId: String?, resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {        

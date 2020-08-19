@@ -22,6 +22,7 @@ class Track: NSObject, AudioItem, TimePitching, AssetOptionsProviding {
     var genre: String?
     var duration: Double?
     var skipped: Bool = false
+    var finalized: Bool = false
     var initialTime: TimeInterval = 0.0;
     var artworkURL: MediaURL?
     let headers: [String: Any]?
@@ -92,6 +93,10 @@ class Track: NSObject, AudioItem, TimePitching, AssetOptionsProviding {
     
     func getSourceUrl() -> String {
         return url.isLocal ? url.value.path : url.value.absoluteString
+    }
+
+    func setFinalized(finalized: Bool) {
+        self.finalized = finalized
     }
     
     func getArtist() -> String? {
