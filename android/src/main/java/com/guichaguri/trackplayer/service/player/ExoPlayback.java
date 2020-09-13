@@ -93,10 +93,10 @@ public abstract class ExoPlayback<T extends Player> implements EventListener, Me
 
                 try {
                     player.seekToDefaultPosition(i);
+                    promise.resolve(null);
                 } catch (IllegalSeekPositionException e) {
                     promise.reject("track_not_in_queue", "Given track ID was not found in queue");
                 }
-                promise.resolve(null);
                 return;
             }
         }
