@@ -26,6 +26,10 @@ public class RNTrackPlayerAudioPlayer: QueuedAudioPlayer {
 
 	public var reactEventEmitter: RCTEventEmitter
 
+	// Used to store the rate that is given in TrackPlayer.setRate() so that we
+	// can maintain the same rate in cases when SwiftAudio would not.
+	private var _rate: Float
+
 	// Override _currentItem so that we can send an event when it changes.
 	override var _currentItem: AudioItem? {
 		willSet(newCurrentItem) {
@@ -37,13 +41,29 @@ public class RNTrackPlayerAudioPlayer: QueuedAudioPlayer {
 				"track": (_currentItem as? Track)?.id ?? nil,
 				"position": self.currentTime,
 				"nextTrack": (newCurrentItem as? Track)?.id ?? nil,
+				"endOfTrack": (_currentItem as? Track)?.finalized ?? false,
 				])
+			(self.currentItem as? Track)?.setFinalized(finalized: false)
 		}
 	}
 
+	// Override rate so that we can maintain the same rate on future tracks.
+	override public var rate: Float {
+        get { return _rate }
+        set { 
+			_rate = newValue
+
+			// Only set the rate on the wrapper if it is already playing.
+			if wrapper.rate > 0 {
+				wrapper.rate = newValue
+			}
+		}
+    }
+
 	// Override init to include a reference to the React Event Emitter.
 	public init(reactEventEmitter: RCTEventEmitter) {
-        self.reactEventEmitter = reactEventEmitter
+        self._rate = 1.0
+		self.reactEventEmitter = reactEventEmitter
 		super.init()
     }
 
@@ -51,6 +71,14 @@ public class RNTrackPlayerAudioPlayer: QueuedAudioPlayer {
     
     override func AVWrapper(didChangeState state: AVPlayerWrapperState) {
         super.AVWrapper(didChangeState: state)
+		
+		// When a track starts playing, reset the rate to the stored rate
+		switch state {
+		case .playing:
+			self.rate = _rate;
+		default: break
+		}
+
 		self.reactEventEmitter.sendEvent(withName: "playback-state", body: ["state": state.rawValue])
     }
     
@@ -60,22 +88,24 @@ public class RNTrackPlayerAudioPlayer: QueuedAudioPlayer {
     }
     
     override func AVWrapperItemDidPlayToEndTime() {
+			(self.currentItem as? Track)?.setFinalized(finalized: true)
         if self.nextItems.count == 0 {
-			// For consistency sake, send an event for the track changing to nothing
-			self.reactEventEmitter.sendEvent(withName: "playback-track-changed", body: [
-				"track": (self.currentItem as? Track)?.id ?? nil,
-				"position": self.currentTime,
-				"nextTrack": nil,
-				])
+					// For consistency sake, send an event for the track changing to nothing
+					self.reactEventEmitter.sendEvent(withName: "playback-track-changed", body: [
+						"track": (self.currentItem as? Track)?.id ?? nil,
+						"position": self.currentTime,
+						"nextTrack": nil,
+						"endOfTrack": true,
+						])
 
-			// fire an event for the queue ending
-			self.reactEventEmitter.sendEvent(withName: "playback-queue-ended", body: [
-				"track": (self.currentItem as? Track)?.id,
-				"position": self.currentTime,
-				])
-		} 
-		super.AVWrapperItemDidPlayToEndTime()
-    }
+					// fire an event for the queue ending
+					self.reactEventEmitter.sendEvent(withName: "playback-queue-ended", body: [
+						"track": (self.currentItem as? Track)?.id,
+						"position": self.currentTime,
+						])
+				} 
+			super.AVWrapperItemDidPlayToEndTime()
+		}
 
 	// MARK: - Remote Command Center
     
