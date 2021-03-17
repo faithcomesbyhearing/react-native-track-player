@@ -41,7 +41,9 @@ public class RNTrackPlayerAudioPlayer: QueuedAudioPlayer {
 				"track": (_currentItem as? Track)?.id ?? nil,
 				"position": self.currentTime,
 				"nextTrack": (newCurrentItem as? Track)?.id ?? nil,
+				"endOfTrack": (_currentItem as? Track)?.finalized ?? false,
 				])
+			(self.currentItem as? Track)?.setFinalized(finalized: false)
 		}
 	}
 
@@ -86,22 +88,24 @@ public class RNTrackPlayerAudioPlayer: QueuedAudioPlayer {
     }
     
     override func AVWrapperItemDidPlayToEndTime() {
+			(self.currentItem as? Track)?.setFinalized(finalized: true)
         if self.nextItems.count == 0 {
-			// For consistency sake, send an event for the track changing to nothing
-			self.reactEventEmitter.sendEvent(withName: "playback-track-changed", body: [
-				"track": (self.currentItem as? Track)?.id ?? nil,
-				"position": self.currentTime,
-				"nextTrack": nil,
-				])
+					// For consistency sake, send an event for the track changing to nothing
+					self.reactEventEmitter.sendEvent(withName: "playback-track-changed", body: [
+						"track": (self.currentItem as? Track)?.id ?? nil,
+						"position": self.currentTime,
+						"nextTrack": nil,
+						"endOfTrack": true,
+						])
 
-			// fire an event for the queue ending
-			self.reactEventEmitter.sendEvent(withName: "playback-queue-ended", body: [
-				"track": (self.currentItem as? Track)?.id,
-				"position": self.currentTime,
-				])
-		} 
-		super.AVWrapperItemDidPlayToEndTime()
-    }
+					// fire an event for the queue ending
+					self.reactEventEmitter.sendEvent(withName: "playback-queue-ended", body: [
+						"track": (self.currentItem as? Track)?.id,
+						"position": self.currentTime,
+						])
+				} 
+			super.AVWrapperItemDidPlayToEndTime()
+		}
 
 	// MARK: - Remote Command Center
     

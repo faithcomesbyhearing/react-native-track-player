@@ -58,6 +58,7 @@ public class RNTrackPlayer: RCTEventEmitter {
             "CAPABILITY_PLAY_FROM_ID": "NOOP",
             "CAPABILITY_PLAY_FROM_SEARCH": "NOOP",
             "CAPABILITY_PAUSE": Capability.pause.rawValue,
+            "CAPABILITY_TOGGLE_PLAY_PAUSE": Capability.togglePlayPause.rawValue,
             "CAPABILITY_STOP": Capability.stop.rawValue,
             "CAPABILITY_SEEK_TO": Capability.seek.rawValue,
             "CAPABILITY_SKIP": "NOOP",
@@ -266,32 +267,38 @@ public class RNTrackPlayer: RCTEventEmitter {
         hasInitialized = true
         resolve(NSNull())
     }
-    
+
+    @objc(isServiceRunning:rejecter:)
+    public func isServiceRunning(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+        // TODO That is probably always true
+        resolve(player != nil)
+    }
+
     @objc(destroy)
     public func destroy() {
         print("Destroying player")
     }
     
     @objc(updateOptions:resolver:rejecter:)
-    public func update(options: [String: Any], resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+    public func update(options: [String: Any], resolve: @escaping RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+        DispatchQueue.main.async {
+            var capabilitiesStr = options["capabilities"] as? [String] ?? []
+            if (capabilitiesStr.contains("play") && capabilitiesStr.contains("pause")) {
+                capabilitiesStr.append("togglePlayPause");
+            }
+            let capabilities = capabilitiesStr.compactMap { Capability(rawValue: $0) }
 
-        var capabilitiesStr = options["capabilities"] as? [String] ?? []
-        if (capabilitiesStr.contains("play") && capabilitiesStr.contains("pause")) {
-            capabilitiesStr.append("togglePlayPause");
-        }
-        let capabilities = capabilitiesStr.compactMap { Capability(rawValue: $0) }
+            let remoteCommands = capabilities.map { capability in
+                capability.mapToPlayerCommand(jumpInterval: options["jumpInterval"] as? NSNumber,
+                                              likeOptions: options["likeOptions"] as? [String: Any],
+                                              dislikeOptions: options["dislikeOptions"] as? [String: Any],
+                                              bookmarkOptions: options["bookmarkOptions"] as? [String: Any])
+            }
+            self.player.enableRemoteCommands(remoteCommands)
         
-        let remoteCommands = capabilities.map { capability in
-            capability.mapToPlayerCommand(jumpInterval: options["jumpInterval"] as? NSNumber,
-                                          likeOptions: options["likeOptions"] as? [String: Any],
-                                          dislikeOptions: options["dislikeOptions"] as? [String: Any],
-                                          bookmarkOptions: options["bookmarkOptions"] as? [String: Any])
-        }
-
-        player.enableRemoteCommands(remoteCommands)
-        
-        resolve(NSNull())
-    }
+            resolve(NSNull())
+         }
+     }
     
     @objc(add:before:resolver:rejecter:)
     public func add(trackDicts: [[String: Any]], before trackId: String?, resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {        

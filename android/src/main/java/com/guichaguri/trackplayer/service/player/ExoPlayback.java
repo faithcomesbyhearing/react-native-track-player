@@ -92,8 +92,12 @@ public abstract class ExoPlayback<T extends Player> implements EventListener, Me
                 lastKnownWindow = player.getCurrentWindowIndex();
                 lastKnownPosition = player.getCurrentPosition();
 
-                player.seekToDefaultPosition(i);
-                promise.resolve(null);
+                try {
+                    player.seekToDefaultPosition(i);
+                    promise.resolve(null);
+                } catch (IllegalSeekPositionException e) {
+                    promise.reject("track_not_in_queue", "Given track ID was not found in queue");
+                }
                 return;
             }
         }
@@ -247,15 +251,17 @@ public abstract class ExoPlayback<T extends Player> implements EventListener, Me
             Track previous = lastKnownWindow == C.INDEX_UNSET || lastKnownWindow >= queue.size() ? null : queue.get(lastKnownWindow);
             Track next = getCurrentTrack();
 
+            boolean endOfTrack = false;
             // Track changed because it ended
             // We'll use its duration instead of the last known position
             if (reason == Player.DISCONTINUITY_REASON_PERIOD_TRANSITION && lastKnownWindow != C.INDEX_UNSET) {
                 if (lastKnownWindow >= player.getCurrentTimeline().getWindowCount()) return;
                 long duration = player.getCurrentTimeline().getWindow(lastKnownWindow, new Window()).getDurationMs();
                 if(duration != C.TIME_UNSET) lastKnownPosition = duration;
+                endOfTrack = true;
             }
 
-            manager.onTrackUpdate(previous, lastKnownPosition, next);
+            manager.onTrackUpdate(previous, lastKnownPosition, next, endOfTrack);
         }
 
         lastKnownWindow = player.getCurrentWindowIndex();
@@ -305,7 +311,7 @@ public abstract class ExoPlayback<T extends Player> implements EventListener, Me
             if(state == PlaybackStateCompat.STATE_STOPPED) {
                 Track previous = getCurrentTrack();
                 long position = getPosition();
-                manager.onTrackUpdate(previous, position, null);
+                manager.onTrackUpdate(previous, position, null, true);
                 manager.onEnd(previous, position);
             }
         }
