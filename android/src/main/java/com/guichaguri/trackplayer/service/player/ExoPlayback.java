@@ -234,7 +234,6 @@ public abstract class ExoPlayback<T extends Player> implements EventListener, Me
         player.release();
     }
 
-    @Override
     public void onTimelineChanged(@NonNull Timeline timeline, int reason) {
         Log.d(Utils.LOG, "onTimelineChanged: " + reason);
 
